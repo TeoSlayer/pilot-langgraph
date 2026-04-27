@@ -1,0 +1,43 @@
+# Reference docker-compose for running a pilot-langgraph worker locally.
+#
+# Assumes:
+#   - The Pilot daemon is already running on the host (`pilotctl daemon start`).
+#   - The host's /tmp/pilot.sock is the daemon's IPC socket.
+#   - You have a `handlers.py` (or similar) in this directory with your handlers.
+#
+# Run:
+#   uv build                          # produce dist/langgraph_pilot-*.whl
+#   docker compose -f deploy/docker-compose.example.yaml up
+
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: pilot-langgraph-worker:local
+    user: "1000:1000"
+    volumes:
+      # Pilot IPC socket from the host (daemon runs outside the container).
+      - /tmp/pilot.sock:/tmp/pilot.sock
+      # SQLite checkpoint store — host-mount for durability across container restarts.
+      - ./pilot-langgraph-state:/var/lib/pilot-langgraph
+      # Bring your handler module(s) in.
+      - ./handlers:/app/handlers
+    working_dir: /app/handlers
+    environment:
+      PILOT_SOCKET: /tmp/pilot.sock
+      PILOT_CHECKPOINT_DB: /var/lib/pilot-langgraph/checkpoints.db
+    command:
+      - --handlers
+      - my_handlers          # corresponds to /app/handlers/my_handlers.py
+      - --port
+      - "5000"
+      - --metrics-port
+      - "9090"
+      - --log-format
+      - json
+      - --log-level
+      - INFO
+    ports:
+      - "9090:9090"          # Prometheus + healthz
+    restart: unless-stopped

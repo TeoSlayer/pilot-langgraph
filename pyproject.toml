@@ -1,0 +1,81 @@
+[project]
+name = "langgraph-pilot"
+version = "0.6.1"
+description = "LangGraph extension that runs nodes on remote machines and persists state across networks via Pilot Protocol tunnels"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Teodor", email = "teodor@vulturelabs.io"},
+]
+keywords = ["langgraph", "langchain", "pilot-protocol", "distributed", "agents", "p2p"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+    "Typing :: Typed",
+]
+dependencies = [
+    "langgraph>=0.2.50",
+    "langchain-core>=0.3.0",
+]
+
+[project.optional-dependencies]
+xai = ["langchain-xai>=0.2.0"]
+twilio = ["twilio>=9.0.0"]
+dotenv = ["python-dotenv>=1.0.0"]
+otel = ["opentelemetry-api>=1.20"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-rerunfailures>=14.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/TeoSlayer/pilot-langgraph"
+"Pilot Protocol" = "https://pilotprotocol.network"
+Issues = "https://github.com/TeoSlayer/pilot-langgraph/issues"
+"IETF Draft" = "https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html"
+
+[project.scripts]
+pilot-langgraph-worker = "pilot_langgraph.worker:main"
+pilot-langgraph-trust = "pilot_langgraph.trust:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pilot_langgraph"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/pilot_langgraph/py.typed" = "pilot_langgraph/py.typed"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/pilot_langgraph",
+    "tests",
+    "examples",
+    "deploy",
+    "README.md",
+    "LICENSE",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Live-daemon tests share a single Pilot tunnel under load; transient
+# cold-tunnel failures auto-retry instead of failing the whole suite.
+addopts = "--reruns 2 --reruns-delay 2"

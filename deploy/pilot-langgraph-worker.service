@@ -1,0 +1,20 @@
+[Unit]
+Description=pilot-langgraph WorkerRouter
+After=pilot-daemon.service network-online.target
+Requires=pilot-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=PILOT_SOCKET=/tmp/pilot.sock
+Environment=PYTHONPATH=/opt/pilot-langgraph/src:/opt/pilot-langgraph/examples
+WorkingDirectory=/opt/pilot-langgraph/examples
+ExecStart=/opt/pilot-langgraph/.venv/bin/python -m pilot_langgraph.worker --handlers worker_handlers --idle-timeout 30 --log-level INFO
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:/var/log/pilot-langgraph-worker.log
+StandardError=append:/var/log/pilot-langgraph-worker.log
+
+[Install]
+WantedBy=multi-user.target
