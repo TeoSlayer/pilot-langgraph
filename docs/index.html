@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>langgraph-pilot — Run LangGraph nodes on remote machines, peer-to-peer</title>
+<meta name="description" content="Open-source LangGraph extension that runs graph nodes on remote machines and persists state across networks via Pilot Protocol tunnels. Encrypted UDP, NAT-traversed, mutually-authenticated peer-to-peer. No public ports, no API gateway, no central broker.">
+<meta name="keywords" content="langgraph, langgraph distributed, langgraph remote node, langgraph peer to peer, langgraph multi machine, langgraph checkpoint, langgraph p2p, pilot protocol, langchain distributed, multi-agent network, ai agent network">
+<meta name="robots" content="index,follow">
+<meta name="author" content="TeoSlayer">
+<link rel="canonical" href="https://teoslayer.github.io/pilot-langgraph/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="langgraph-pilot — Run LangGraph nodes on remote machines, peer-to-peer">
+<meta property="og:description" content="LangGraph extension that runs graph nodes on remote machines and persists state across networks via Pilot Protocol tunnels. Encrypted UDP, NAT-traversed, mutually-authenticated peer-to-peer.">
+<meta property="og:url" content="https://teoslayer.github.io/pilot-langgraph/">
+<meta property="og:site_name" content="langgraph-pilot">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="langgraph-pilot — Run LangGraph nodes on remote machines, peer-to-peer">
+<meta name="twitter:description" content="LangGraph extension that runs graph nodes on remote machines via Pilot Protocol tunnels.">
+
+<meta name="theme-color" content="#0b0b0a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "langgraph-pilot",
+  "alternateName": "pilot-langgraph",
+  "description": "LangGraph extension that runs graph nodes on remote machines and persists state across networks via Pilot Protocol tunnels.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS",
+  "url": "https://teoslayer.github.io/pilot-langgraph/",
+  "downloadUrl": "https://github.com/TeoSlayer/pilot-langgraph",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "softwareRequirements": "Python 3.11+",
+  "programmingLanguage": "Python",
+  "keywords": "langgraph, distributed, peer-to-peer, pilot-protocol, langchain, agents",
+  "isBasedOn": {
+    "@type": "SoftwareApplication",
+    "name": "Pilot Protocol",
+    "url": "https://pilotprotocol.network/"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "TeoSlayer",
+    "url": "https://github.com/TeoSlayer"
+  }
+}
+</script>
+
+<script>
+  (function () {
+    try {
+      var stored = localStorage.getItem('pilot-theme');
+      var prefers = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      var theme = stored || prefers;
+      if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) {}
+  })();
+</script>
+
+<style>
+:root {
+  --bg:        #0b0b0a;
+  --bg-2:      #111110;
+  --bg-deep:   #070706;
+  --ink:       #eceae3;
+  --ink-dim:   #8a8a83;
+  --ink-faint: #3a3a37;
+  --line:      #1d1d1b;
+  --line-2:    #26261f;
+  --accent:        oklch(0.88 0.22 125);
+  --accent-ink:    #0b0b0a;
+  --accent-dim:    oklch(0.88 0.22 125 / .18);
+  --term-bg:       #060605;
+  --serif: 'Instrument Serif', 'Times New Roman', serif;
+  --sans:  'Inter Tight', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --mono:  'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --wrap-max: 1280px;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg:        #fafaf7;
+  --bg-2:      #f0efea;
+  --bg-deep:   #e9e8e2;
+  --ink:       #0b0b0a;
+  --ink-dim:   #5a5a54;
+  --ink-faint: #c7c6be;
+  --line:      #e6e5df;
+  --line-2:    #d8d7d0;
+  --accent:        oklch(0.72 0.19 125);
+  --accent-ink:    #0b0b0a;
+  --term-bg:       #0b0b0a;
+  color-scheme: light;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow-x: hidden; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+@media (max-width: 640px) { body { font-size: 15px; } }
+a { color: inherit; text-decoration: none; transition: color .15s ease; }
+a:hover { color: var(--accent); }
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: var(--wrap-max); margin: 0 auto; padding: 0 48px; position: relative; }
+@media (max-width: 900px) { .wrap { padding: 0 28px; } }
+@media (max-width: 520px) { .wrap { padding: 0 20px; } }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 1px;
+  background: var(--ink-dim);
+  display: inline-block;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.btn .arr { font-size: 14px; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.chip .val { color: var(--ink); letter-spacing: 0.04em; font-weight: 500; }
+
+/* Nav */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 0;
+}
+.nav-brand {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  color: var(--ink);
+}
+.nav-brand .slash { color: var(--ink-faint); }
+.nav-links {
+  display: flex;
+  gap: 28px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  align-items: center;
+}
+.nav-links a:hover { color: var(--ink); }
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.theme-toggle:hover { color: var(--ink); border-color: var(--ink); }
+@media (max-width: 640px) {
+  .nav-links { gap: 16px; }
+  .nav-links a:not(.repo-link):not(.pilot-link) { display: none; }
+}
+
+/* Hero */
+.hero { padding: 96px 0 80px; border-bottom: 1px solid var(--line); position: relative; }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+  align-items: end;
+  margin-top: 48px;
+}
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; gap: 32px; } }
+
+.display {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(36px, 6vw, 80px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.display em {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+}
+.display .accent { color: var(--accent); }
+
+.hero-sub {
+  font-size: clamp(17px, 1.6vw, 21px);
+  line-height: 1.55;
+  color: var(--ink-dim);
+  max-width: 38ch;
+}
+.hero-sub b { color: var(--ink); font-weight: 500; }
+
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+
+.hero-meta {
+  margin-top: 32px;
+  display: grid;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.hero-meta .l { letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); }
+.hero-meta .v { color: var(--ink); margin-top: 4px; }
+
+/* Section */
+.section { padding: 112px 0; border-top: 1px solid var(--line); }
+@media (max-width: 900px) { .section { padding: 80px 0; } }
+@media (max-width: 640px) { .section { padding: 64px 0; } }
+
+.section-head { display: grid; grid-template-columns: 160px 1fr; gap: 48px; margin-bottom: 56px; }
+.section-head h2 {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(28px, 4.6vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0;
+  max-width: 22ch;
+}
+.section-head h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; }
+.section-head h2 .accent { color: var(--accent); }
+@media (max-width: 900px) { .section-head { grid-template-columns: 1fr; gap: 18px; margin-bottom: 36px; } }
+
+/* Code */
+pre {
+  background: var(--term-bg);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 22px 26px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: #eceae3;
+  margin: 0;
+}
+pre .c { color: #8a8a83; }
+pre .k { color: #c8ff00; }
+pre .s { color: #c8ff00; }
+pre .n { color: #eceae3; }
+
+/* Feature grid */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+@media (max-width: 900px) { .features { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .features { grid-template-columns: 1fr; } }
+.feature {
+  background: var(--bg);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 220px;
+}
+.feature .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+.feature h3 {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.feature h3 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+.feature p { color: var(--ink-dim); font-size: 15px; line-height: 1.55; }
+.feature code { font-family: var(--mono); font-size: 0.84em; color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); }
+
+/* Spec table */
+.spec {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.spec th {
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.spec td {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-dim);
+  vertical-align: top;
+}
+.spec td:first-child {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 0.84rem;
+  white-space: nowrap;
+  width: 1%;
+}
+.spec strong { color: var(--ink); font-weight: 500; }
+
+/* Architecture diagram */
+.diagram {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 28px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  white-space: pre;
+  overflow-x: auto;
+}
+.diagram .a { color: var(--accent); }
+
+/* Two-col install */
+.install {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+@media (max-width: 900px) { .install { grid-template-columns: 1fr; } }
+.install h3 {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 14px;
+}
+
+/* Pilot protocol callout */
+.pilot-callout {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  padding: 36px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 28px;
+  align-items: center;
+}
+@media (max-width: 720px) { .pilot-callout { grid-template-columns: 1fr; } }
+.pilot-callout h3 {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.pilot-callout h3 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+.pilot-callout p { color: var(--ink-dim); font-size: 16px; max-width: 60ch; }
+
+/* Footer */
+.site-footer { border-top: 1px solid var(--line); padding: 80px 0 56px; background: var(--bg-deep); }
+.foot-big {
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(40px, 8vw, 96px);
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  margin-bottom: 36px;
+}
+.foot-big em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+.foot-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 64px; }
+.foot-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 32px;
+  padding-top: 48px;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 900px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .foot-grid { grid-template-columns: 1fr; } }
+.foot-grid h4 {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+.foot-grid a { display: block; padding: 4px 0; color: var(--ink-dim); font-size: 14px; }
+.foot-grid a:hover { color: var(--accent); }
+.foot-about p { color: var(--ink-dim); font-size: 14px; max-width: 36ch; }
+.foot-fine {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation: none !important; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <div class="nav-inner">
+      <a class="nav-brand" href="/pilot-langgraph/">langgraph<span class="slash"> / </span>pilot</a>
+      <div class="nav-links">
+        <a href="#what">What</a>
+        <a href="#install">Install</a>
+        <a href="#features">Features</a>
+        <a href="#architecture">Architecture</a>
+        <a class="pilot-link" href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol →</a>
+        <a class="repo-link" href="https://github.com/TeoSlayer/pilot-langgraph" rel="noopener">GitHub</a>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">Theme</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="chip">
+      <span class="dot"></span>
+      <span>v0.6.1</span>
+      <span class="val">Python 3.11+</span>
+    </div>
+
+    <div class="hero-grid">
+      <div>
+        <h1 class="display">
+          Run <span class="accent">LangGraph</span><br/>
+          across <em>any</em> network.<br/>
+          <em class="accent">Peer-to-peer.</em>
+        </h1>
+        <div class="cta-row">
+          <a class="btn primary" href="https://github.com/TeoSlayer/pilot-langgraph#quickstart">Quickstart <span class="arr">→</span></a>
+          <a class="btn" href="https://github.com/TeoSlayer/pilot-langgraph">View on GitHub</a>
+          <a class="btn" href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol</a>
+        </div>
+      </div>
+      <div>
+        <p class="hero-sub">
+          <b>langgraph-pilot</b> is a Python package that lets a LangGraph node
+          execute on a different machine, with graph state persisted across the
+          network — over end-to-end encrypted <a href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol</a> tunnels.
+          NAT-traversed. Mutually authenticated. <b>No public ports, no API gateway, no central broker.</b>
+        </p>
+        <div class="hero-meta">
+          <div><div class="l">License</div><div class="v">AGPL-3.0</div></div>
+          <div><div class="l">Repo</div><div class="v"><a href="https://github.com/TeoSlayer/pilot-langgraph">github.com/TeoSlayer/pilot-langgraph</a></div></div>
+          <div><div class="l">Network layer</div><div class="v"><a href="https://pilotprotocol.network/" rel="noopener">pilotprotocol.network →</a></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT -->
+<section class="section" id="what">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">01 / What</span>
+      <h2>LangGraph nodes that <em class="accent">live on different machines.</em></h2>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start;" class="install">
+      <div>
+        <p style="font-size: 17px; line-height: 1.65; color: var(--ink-dim); margin-bottom: 18px;">
+          A <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">PilotRemoteRunnable</code>
+          looks and feels like any other LangChain Runnable — <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">ainvoke</code> /
+          <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">astream</code>, retries, callbacks, RunnableConfig propagation —
+          but the work happens on a remote pilot peer. The peer can be a laptop, a
+          phone, an on-prem server, a cloud VM. Trust gates every call.
+        </p>
+        <p style="font-size: 17px; line-height: 1.65; color: var(--ink-dim);">
+          A <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">PilotCheckpointSaver</code>
+          ships every graph checkpoint to a remote peer's SQLite store, idempotent
+          on retry, so graph state survives process restarts and lives on a
+          different machine than the graph that wrote it.
+        </p>
+      </div>
+      <pre><span class="c"># A graph that fans out to 3 remote workers in parallel</span>
+<span class="c"># and persists state on a 4th, all over Pilot tunnels.</span>
+<span class="k">from</span> <span class="n">langgraph.graph</span> <span class="k">import</span> <span class="n">StateGraph</span>
+<span class="k">from</span> <span class="n">pilot_langgraph</span> <span class="k">import</span> (
+    <span class="n">PilotRemoteRunnable</span>,
+    <span class="n">PilotFanoutRunnable</span>,
+    <span class="n">PilotCheckpointSaver</span>,
+)
+
+<span class="n">graph</span> = <span class="n">StateGraph</span>(<span class="n">MyState</span>)
+<span class="n">graph</span>.<span class="n">add_node</span>(<span class="s">"research"</span>, <span class="n">PilotFanoutRunnable</span>({
+    <span class="s">"broad"</span>: <span class="n">PilotRemoteRunnable</span>(<span class="n">node</span>=<span class="s">"search"</span>, <span class="n">peer</span>=<span class="s">"worker-a"</span>),
+    <span class="s">"deep"</span>:  <span class="n">PilotRemoteRunnable</span>(<span class="n">node</span>=<span class="s">"search"</span>, <span class="n">peer</span>=<span class="s">"worker-b"</span>),
+    <span class="s">"novel"</span>: <span class="n">PilotRemoteRunnable</span>(<span class="n">node</span>=<span class="s">"search"</span>, <span class="n">peer</span>=<span class="s">"worker-c"</span>),
+}))
+
+<span class="n">app</span> = <span class="n">graph</span>.<span class="n">compile</span>(
+    <span class="n">checkpointer</span>=<span class="n">PilotCheckpointSaver</span>(<span class="n">peer</span>=<span class="s">"state-worker"</span>),
+)</pre>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section class="section" id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">02 / Install</span>
+      <h2>Two daemons, <em>one</em> install.</h2>
+    </div>
+    <div class="install">
+      <div>
+        <h3>1. Install Pilot Protocol</h3>
+        <pre><span class="c"># From <a style="color: var(--accent);" href="https://pilotprotocol.network/" rel="noopener">pilotprotocol.network</a></span>
+<span class="n">curl</span> -fsSL https://pilotprotocol.network/install.sh <span class="k">|</span> sh
+<span class="n">pilotctl</span> daemon start \
+  --hostname my-host \
+  --email you@example.com</pre>
+      </div>
+      <div>
+        <h3>2. Install langgraph-pilot</h3>
+        <pre><span class="c"># From PyPI (coming soon) or source:</span>
+<span class="n">pip</span> install \
+  git+https://github.com/TeoSlayer/pilot-langgraph
+
+<span class="c"># Run a worker:</span>
+<span class="n">pilot-langgraph-worker</span> \
+  --handlers my_handlers --port 5000</pre>
+      </div>
+    </div>
+    <p style="margin-top: 28px; color: var(--ink-dim); font-size: 15px;">
+      Worker handlers are plain Python functions decorated with <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">@pilot_handler("name")</code>.
+      Each handler can take per-handler ACL, timeouts, rate limits, max-concurrent
+      semaphores, and pydantic input/output validation. The full surface and a
+      60-second quickstart live in the
+      <a style="color: var(--accent);" href="https://github.com/TeoSlayer/pilot-langgraph#readme">README</a>.
+    </p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">03 / Features</span>
+      <h2>Production-grade primitives, <em class="accent">async-first.</em></h2>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <span class="num">01</span>
+        <h3>Remote <em>execution</em></h3>
+        <p><code>PilotRemoteRunnable</code> — async-first LangChain Runnable, multiplexed concurrent calls share one connection, transparent reconnect, configurable retry, optional pydantic validation.</p>
+      </div>
+      <div class="feature">
+        <span class="num">02</span>
+        <h3>Parallel <em>fanout</em></h3>
+        <p><code>PilotFanoutRunnable</code> dispatches one input to N targets in parallel. Native LangGraph <code>Send</code> API supported for dynamic data-dependent fanout.</p>
+      </div>
+      <div class="feature">
+        <span class="num">03</span>
+        <h3>Distributed <em>checkpoints</em></h3>
+        <p><code>PilotCheckpointSaver</code> ships every checkpoint to a remote peer. Idempotent retries, SQLite-backed store, graph state survives process restarts.</p>
+      </div>
+      <div class="feature">
+        <span class="num">04</span>
+        <h3>Per-handler <em>ACL</em></h3>
+        <p>Decorate any handler with <code>@pilot_handler("name", allow=[node_id, ...])</code> and only the listed peers can call it. Default-open or default-closed.</p>
+      </div>
+      <div class="feature">
+        <span class="num">05</span>
+        <h3>Timeouts &amp; <em>rate limits</em></h3>
+        <p>Sliding-window <code>rate_per_caller</code>, hard <code>timeout_secs</code>, <code>max_concurrent</code> semaphore. Typed errors come back to the caller with structured metadata.</p>
+      </div>
+      <div class="feature">
+        <span class="num">06</span>
+        <h3>Streaming <em>handlers</em></h3>
+        <p>Async-generator handlers stream chunks to the caller's <code>astream</code>. Pub/sub channels (<code>PilotChannel</code>) for many-to-many topics with auto-reconnect.</p>
+      </div>
+      <div class="feature">
+        <span class="num">07</span>
+        <h3>Observability <em>built in</em></h3>
+        <p>Prometheus <code>/metrics</code> + <code>/healthz</code> via <code>--metrics-port</code>. JSON logging with <code>request_id</code> correlation. OpenTelemetry W3C trace propagation across the wire.</p>
+      </div>
+      <div class="feature">
+        <span class="num">08</span>
+        <h3>Worker server &amp; <em>middleware</em></h3>
+        <p>Auto-registered <code>_health</code> + <code>_handlers</code> introspection (with JSON schemas), graceful SIGTERM drain, periodic tasks, dev <code>--reload</code>, middleware chain.</p>
+      </div>
+      <div class="feature">
+        <span class="num">09</span>
+        <h3>Reference <em>deployments</em></h3>
+        <p>Ships with a systemd unit, a Dockerfile, and a <code>docker-compose</code> example. Worker auto-discoverable via <code>tools/discover.py</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section class="section" id="architecture">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">04 / Architecture</span>
+      <h2>Daemons. Trust. <em class="accent">Tunnels.</em></h2>
+    </div>
+    <p style="color: var(--ink-dim); font-size: 17px; line-height: 1.65; max-width: 64ch; margin-bottom: 28px;">
+      Each Pilot daemon assigns the host a 48-bit virtual address.
+      Trusted peers reach each other by address or hostname; the
+      <a style="color: var(--accent);" href="https://pilotprotocol.network/" rel="noopener">rendezvous server</a>
+      handles only discovery and NAT hole-punching — your data flows directly between daemons,
+      AES-256-GCM encrypted, signed by Ed25519 identities.
+    </p>
+    <div class="diagram"><span class="a">[ your laptop ]</span>                                <span class="a">[ remote pilot worker ]</span>
+┌───────────────────────────┐      ┌───────────────────────────────────┐
+│  LangGraph (yours)        │      │  WorkerServer (port 5000)         │
+│   ├─ planner              │      │   ├─ search()       [open]        │
+│   ├─ remote_node ─────────┼─dial─►   ├─ evaluate()     [ACL: trusted]│
+│   │   (PilotRemote        │      │   ├─ research()     [streaming]   │
+│   │    Runnable)          │◄─reply   └─ checkpoint_*   [SQLite]      │
+│   ├─ fanout               │      │                                   │
+│   │   (PilotFanout)       │      │  Built-in pub/sub broker          │
+│   ├─ checkpointer         │      │   (port 1002)                     │
+│   └─ summarizer           │      └───────────────────────────────────┘
+└───────────┬───────────────┘                          ▲
+            │                                          │  encrypted UDP
+┌───────────▼───────────────┐    ┌─────────────────────┴─────────────┐
+│  PilotConnection (asyncio)├─u──►  pilot-daemon (host)              │
+└───────────────────────────┘    └─────────────────┬─────────────────┘
+                                                   │
+                                            NAT-traversed via
+                                          Pilot rendezvous</div>
+  </div>
+</section>
+
+<!-- WHEN TO USE -->
+<section class="section" id="why">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">05 / Why</span>
+      <h2>When you reach for <em class="accent">langgraph-pilot.</em></h2>
+    </div>
+    <table class="spec">
+      <thead>
+        <tr><th style="width: 28%;">You want</th><th>What langgraph-pilot gives you</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Distributed agents</td>
+          <td><strong>A LangGraph node that runs on another machine.</strong> No HTTP wrapper, no API gateway, no service-mesh. The remote peer dials the local daemon's Unix socket; nothing is exposed to the public internet.</td>
+        </tr>
+        <tr>
+          <td>State across restarts</td>
+          <td><strong>A checkpoint store that lives on a different host than the graph.</strong> Your laptop crashes; the workflow resumes against the persisted state on the worker. Idempotent retries; SQLite or in-memory.</td>
+        </tr>
+        <tr>
+          <td>Cross-org workflows</td>
+          <td><strong>Mutual trust gates every call.</strong> Per-handler ACL means even a trusted peer can only call the handlers it's been allowlisted for. Workflows that span organizational boundaries with no shared infra.</td>
+        </tr>
+        <tr>
+          <td>Multi-region fanout</td>
+          <td><strong><code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">PilotFanoutRunnable</code> dispatches one input to N peers in parallel.</strong> Each branch lands on a physically distinct VM; result includes the worker's hostname so you can prove it.</td>
+        </tr>
+        <tr>
+          <td>NAT-bound workers</td>
+          <td><strong>NAT traversal is built in.</strong> Workers behind home routers, dynamic IPs, mobile networks — Pilot's UDP hole-punching gets through. No port forwarding, no VPN.</td>
+        </tr>
+        <tr>
+          <td>Observability</td>
+          <td><strong>Prometheus metrics, JSON logs, OpenTelemetry traces.</strong> <code style="font-family: var(--mono); color: var(--accent); background: var(--bg-2); padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line); font-size: 0.85em;">RunnableConfig</code> callbacks fire normally for every remote call — LangSmith works untouched.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- PILOT CALLOUT -->
+<section class="section" id="pilot">
+  <div class="wrap">
+    <div class="pilot-callout">
+      <div>
+        <h3>The network layer is <em>Pilot Protocol</em>.</h3>
+        <p>
+          Pilot is a peer-to-peer overlay network for AI agents. Every daemon
+          gets an Ed25519 identity, a 48-bit virtual address, NAT-traversed
+          tunnels, and AES-256-GCM encryption per session. langgraph-pilot is
+          one of the first frameworks built on top of it. Read the spec, see
+          the live network, install it for your own agents.
+        </p>
+      </div>
+      <div>
+        <a class="btn primary" href="https://pilotprotocol.network/" rel="noopener">pilotprotocol.network <span class="arr">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-big">
+      LangGraph,<br/>
+      <em>everywhere.</em>
+    </div>
+    <div class="foot-cta">
+      <a class="btn primary" href="https://github.com/TeoSlayer/pilot-langgraph">View on GitHub <span class="arr">→</span></a>
+      <a class="btn" href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol</a>
+    </div>
+
+    <div class="foot-grid">
+      <div class="foot-about">
+        <h4>langgraph-pilot</h4>
+        <p>A LangGraph extension that runs nodes on remote machines and persists state across networks via Pilot Protocol tunnels.</p>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <a href="https://github.com/TeoSlayer/pilot-langgraph">GitHub repo</a>
+        <a href="https://github.com/TeoSlayer/pilot-langgraph#readme">README</a>
+        <a href="https://github.com/TeoSlayer/pilot-langgraph/blob/main/SECURITY.md">Security policy</a>
+        <a href="https://github.com/TeoSlayer/pilot-langgraph/blob/main/TRUST.md">Trust model</a>
+      </div>
+      <div>
+        <h4>Pilot Protocol</h4>
+        <a href="https://pilotprotocol.network/" rel="noopener">pilotprotocol.network</a>
+        <a href="https://github.com/TeoSlayer/pilotprotocol" rel="noopener">Pilot on GitHub</a>
+        <a href="https://www.ietf.org/archive/id/draft-teodor-pilot-protocol-01.html" rel="noopener">IETF draft</a>
+      </div>
+      <div>
+        <h4>LangChain</h4>
+        <a href="https://github.com/langchain-ai/langgraph" rel="noopener">LangGraph</a>
+        <a href="https://github.com/langchain-ai/langchain" rel="noopener">LangChain</a>
+      </div>
+    </div>
+
+    <div class="foot-fine">
+      <span>AGPL-3.0 · © 2026 TeoSlayer</span>
+      <span>Built on <a href="https://pilotprotocol.network/" rel="noopener" style="color: var(--ink-dim);">Pilot Protocol</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        try { localStorage.setItem('pilot-theme', 'dark'); } catch (e) {}
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        try { localStorage.setItem('pilot-theme', 'light'); } catch (e) {}
+      }
+    });
+  })();
+</script>
+
+</body>
+</html>
