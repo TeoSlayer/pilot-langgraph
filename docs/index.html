@@ -56,6 +56,71 @@
 }
 </script>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is langgraph-pilot?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "langgraph-pilot is an open-source Python package that extends LangGraph so individual graph nodes can run on remote machines, with graph state persisted across the network. The remote calls travel over Pilot Protocol tunnels — encrypted UDP, NAT-traversed, mutually authenticated peer-to-peer connections — without exposing public ports on the worker."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I run a LangGraph node on a remote machine?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Wrap the remote function in a PilotRemoteRunnable and use it like any LangGraph node. The Runnable speaks to a local pilot-daemon over a Unix socket; the daemon establishes an encrypted tunnel to the worker's daemon, which dispatches to a handler decorated with @pilot_handler('name'). Both ainvoke and astream are supported, and concurrent calls multiplex over a single connection."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does langgraph-pilot need a public IP or open ports on the worker?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Pilot Protocol uses NAT traversal via a rendezvous server — workers behind home routers, dynamic IPs, or mobile networks accept connections from trusted peers without port forwarding, a VPN, or any public port. The rendezvous server only sees discovery and hole-punching control packets; payload data flows directly between daemons."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does langgraph-pilot persist graph state across process restarts?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PilotCheckpointSaver is a BaseCheckpointSaver subclass that ships every checkpoint to a remote peer's store (SQLite by default; in-memory available). Writes are idempotent on retry via UNIQUE constraints. The graph that wrote the state can crash and a fresh process — even on a different machine — can resume from the same thread_id."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is langgraph-pilot compatible with LangSmith and LangChain callbacks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. PilotRemoteRunnable participates fully in the RunnableConfig propagation chain — on_chain_start, on_chain_end, and on_chain_error fire normally for every remote call, so LangSmith and any other LangChain CallbackHandler work without code changes. OpenTelemetry W3C trace context is also propagated across the wire."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What kind of access control does the worker enforce?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Two tiers. Pilot Protocol enforces mutual identity-based trust at the network layer: an untrusted peer can't dial the daemon at all. On top of that, every handler can be registered with allow=[node_id, ...] so even a trusted peer is rejected if it isn't on the explicit allowlist. Per-handler timeouts, sliding-window rate limits, and max-concurrent semaphores are also available."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is Pilot Protocol?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pilot Protocol is a peer-to-peer overlay network for AI agents. Each daemon has an Ed25519 identity, a 48-bit virtual address, NAT-traversed UDP tunnels, and per-session AES-256-GCM encryption. langgraph-pilot is the LangGraph integration; the protocol itself is documented at pilotprotocol.network and as an IETF Internet-Draft."
+      }
+    }
+  ]
+}
+</script>
+
 <script>
   (function () {
     try {
@@ -533,6 +598,54 @@ pre .n { color: #eceae3; }
   margin-bottom: 14px;
 }
 
+/* FAQ */
+.faq { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.faq details {
+  background: var(--bg);
+  padding: 24px 28px;
+  cursor: pointer;
+}
+.faq details[open] { background: var(--bg-2); }
+.faq summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  font-family: var(--sans);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+  content: "+";
+  font-family: var(--mono);
+  font-size: 22px;
+  color: var(--accent);
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+.faq details[open] summary::after { content: "−"; }
+.faq .faq-a {
+  margin-top: 14px;
+  color: var(--ink-dim);
+  font-size: 15.5px;
+  line-height: 1.6;
+  max-width: 70ch;
+}
+.faq .faq-a code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  color: var(--accent);
+  background: var(--bg-deep);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+
 /* Pilot protocol callout */
 .pilot-callout {
   background: var(--bg-2);
@@ -623,6 +736,7 @@ pre .n { color: #eceae3; }
         <a href="#install">Install</a>
         <a href="#features">Features</a>
         <a href="#architecture">Architecture</a>
+        <a href="#faq">FAQ</a>
         <a class="pilot-link" href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol →</a>
         <a class="repo-link" href="https://github.com/TeoSlayer/pilot-langgraph" rel="noopener">GitHub</a>
         <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">Theme</button>
@@ -913,6 +1027,60 @@ pre .n { color: #eceae3; }
         </tr>
       </tbody>
     </table>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">06 / FAQ</span>
+      <h2>Common <em class="accent">questions.</em></h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>What is langgraph-pilot?</summary>
+        <div class="faq-a">
+          langgraph-pilot is an open-source Python package that extends LangGraph so individual graph nodes can run on remote machines, with graph state persisted across the network. The remote calls travel over <a href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol</a> tunnels — encrypted UDP, NAT-traversed, mutually authenticated peer-to-peer connections — without exposing public ports on the worker.
+        </div>
+      </details>
+      <details>
+        <summary>How do I run a LangGraph node on a remote machine?</summary>
+        <div class="faq-a">
+          Wrap the remote function in a <code>PilotRemoteRunnable</code> and use it like any LangGraph node. The Runnable speaks to a local <code>pilot-daemon</code> over a Unix socket; the daemon establishes an encrypted tunnel to the worker's daemon, which dispatches to a handler decorated with <code>@pilot_handler('name')</code>. Both <code>ainvoke</code> and <code>astream</code> are supported, and concurrent calls multiplex over a single connection.
+        </div>
+      </details>
+      <details>
+        <summary>Does langgraph-pilot need a public IP or open ports on the worker?</summary>
+        <div class="faq-a">
+          No. Pilot Protocol uses NAT traversal via a rendezvous server — workers behind home routers, dynamic IPs, or mobile networks accept connections from trusted peers without port forwarding, a VPN, or any public port. The rendezvous server only sees discovery and hole-punching control packets; payload data flows directly between daemons.
+        </div>
+      </details>
+      <details>
+        <summary>How does langgraph-pilot persist graph state across process restarts?</summary>
+        <div class="faq-a">
+          <code>PilotCheckpointSaver</code> is a <code>BaseCheckpointSaver</code> subclass that ships every checkpoint to a remote peer's store (SQLite by default; in-memory available). Writes are idempotent on retry via <code>UNIQUE</code> constraints. The graph that wrote the state can crash and a fresh process — even on a different machine — can resume from the same <code>thread_id</code>.
+        </div>
+      </details>
+      <details>
+        <summary>Is langgraph-pilot compatible with LangSmith and LangChain callbacks?</summary>
+        <div class="faq-a">
+          Yes. <code>PilotRemoteRunnable</code> participates fully in the <code>RunnableConfig</code> propagation chain — <code>on_chain_start</code>, <code>on_chain_end</code>, and <code>on_chain_error</code> fire normally for every remote call, so LangSmith and any other LangChain <code>CallbackHandler</code> work without code changes. OpenTelemetry W3C trace context is also propagated across the wire.
+        </div>
+      </details>
+      <details>
+        <summary>What kind of access control does the worker enforce?</summary>
+        <div class="faq-a">
+          Two tiers. Pilot Protocol enforces mutual identity-based trust at the network layer: an untrusted peer can't dial the daemon at all. On top of that, every handler can be registered with <code>allow=[node_id, ...]</code> so even a trusted peer is rejected if it isn't on the explicit allowlist. Per-handler <code>timeout_secs</code>, sliding-window <code>rate_per_caller</code>, and <code>max_concurrent</code> semaphores are also available.
+        </div>
+      </details>
+      <details>
+        <summary>What is Pilot Protocol?</summary>
+        <div class="faq-a">
+          <a href="https://pilotprotocol.network/" rel="noopener">Pilot Protocol</a> is a peer-to-peer overlay network for AI agents. Each daemon has an Ed25519 identity, a 48-bit virtual address, NAT-traversed UDP tunnels, and per-session AES-256-GCM encryption. langgraph-pilot is the LangGraph integration; the protocol itself is documented at <a href="https://pilotprotocol.network/" rel="noopener">pilotprotocol.network</a> and as an IETF Internet-Draft.
+        </div>
+      </details>
+    </div>
   </div>
 </section>
 

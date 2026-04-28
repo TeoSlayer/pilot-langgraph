@@ -1,6 +1,13 @@
 # langgraph-pilot
 
-Run [LangGraph](https://github.com/langchain-ai/langgraph) nodes on remote machines and persist graph state across networks, over end-to-end encrypted [Pilot Protocol](https://github.com/TeoSlayer/pilotprotocol) tunnels — NAT-traversed, mutually-authenticated, peer-to-peer. No public ports, no API gateway, no central broker.
+[![Docs](https://img.shields.io/badge/docs-teoslayer.github.io-c8ff00?style=flat-square)](https://teoslayer.github.io/pilot-langgraph/)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue?style=flat-square)](https://www.python.org/)
+[![Pilot Protocol](https://img.shields.io/badge/built%20on-Pilot%20Protocol-c8ff00?style=flat-square)](https://pilotprotocol.network/)
+
+Run [LangGraph](https://github.com/langchain-ai/langgraph) nodes on remote machines and persist graph state across networks, over end-to-end encrypted [Pilot Protocol](https://pilotprotocol.network/) tunnels — NAT-traversed, mutually-authenticated, peer-to-peer. No public ports, no API gateway, no central broker.
+
+→ **Docs & overview:** <https://teoslayer.github.io/pilot-langgraph/>
 
 ```python
 from langgraph.graph import StateGraph
