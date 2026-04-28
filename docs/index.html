@@ -381,19 +381,141 @@ pre .n { color: #eceae3; }
 }
 .spec strong { color: var(--ink); font-weight: 500; }
 
-/* Architecture diagram */
-.diagram {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  padding: 28px;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  line-height: 1.55;
-  color: var(--ink-dim);
-  white-space: pre;
-  overflow-x: auto;
+/* Architecture topology — semantic HTML/CSS, theme-aware, responsive */
+.topo {
+  display: grid;
+  gap: 0;
+  max-width: 580px;
+  margin: 0 auto;
 }
-.diagram .a { color: var(--accent); }
+.topo-host {
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+  padding: 28px;
+}
+.topo-host-h {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.topo-host-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.topo-host-h h4 {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: 0;
+}
+.topo-stack { display: grid; gap: 0; }
+.topo-block {
+  background: var(--bg);
+  border: 1px solid var(--line-2);
+  padding: 16px 18px;
+}
+.topo-block-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.topo-block ul {
+  list-style: none;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  display: grid;
+  gap: 5px;
+}
+.topo-block ul li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.topo-block ul li::before {
+  content: "·";
+  color: var(--accent);
+  font-weight: 700;
+}
+.topo-block .tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.topo-conn {
+  position: relative;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topo-conn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-2);
+}
+.topo-conn span {
+  position: relative;
+  background: var(--bg-2);
+  padding: 0 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.topo-wire {
+  position: relative;
+  padding: 28px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topo-wire::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom,
+    var(--line-2) 0%,
+    var(--accent) 30%,
+    var(--accent) 70%,
+    var(--line-2) 100%);
+}
+.topo-wire span {
+  position: relative;
+  background: var(--bg);
+  padding: 9px 18px;
+  border: 1px solid var(--accent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1.6;
+}
 
 /* Two-col install */
 .install {
@@ -702,37 +824,54 @@ pre .n { color: #eceae3; }
       handles only discovery and NAT hole-punching — your data flows directly between daemons,
       AES-256-GCM encrypted, signed by Ed25519 identities.
     </p>
-    <div class="diagram"><span class="a">YOUR HOST</span>
-┌─────────────────────────────────────────┐
-│  LangGraph  (your code)                 │
-│   ├─ planner                            │
-│   ├─ PilotRemoteRunnable                │
-│   ├─ PilotFanoutRunnable                │
-│   ├─ PilotCheckpointSaver               │
-│   └─ summarizer                         │
-└──────────────────┬──────────────────────┘
-                   │  unix socket
-                   ▼
-┌─────────────────────────────────────────┐
-│  pilot-daemon                           │
-└──────────────────┬──────────────────────┘
-                   │
-                   │  <span class="a">encrypted UDP  ·  NAT-traversed</span>
-                   │  via Pilot rendezvous
-                   ▼
-┌─────────────────────────────────────────┐
-│  pilot-daemon                           │
-└──────────────────┬──────────────────────┘
-                   │  unix socket
-                   ▼
-┌─────────────────────────────────────────┐
-│  WorkerServer  (port 5000)              │
-│   ├─ search()        [open]             │
-│   ├─ evaluate()      [ACL: trusted]     │
-│   ├─ research()      [streaming]        │
-│   └─ checkpoint_*    [SQLite]           │
-└─────────────────────────────────────────┘
-<span class="a">REMOTE WORKER</span></div>
+    <div class="topo">
+      <article class="topo-host">
+        <header class="topo-host-h">
+          <span class="topo-host-eyebrow">Host A</span>
+          <h4>Your laptop / VM</h4>
+        </header>
+        <div class="topo-stack">
+          <div class="topo-block">
+            <div class="topo-block-title">LangGraph (your code)</div>
+            <ul>
+              <li>PilotRemoteRunnable</li>
+              <li>PilotFanoutRunnable</li>
+              <li>PilotCheckpointSaver</li>
+            </ul>
+          </div>
+          <div class="topo-conn"><span>unix socket</span></div>
+          <div class="topo-block">
+            <div class="topo-block-title">pilot-daemon</div>
+          </div>
+        </div>
+      </article>
+
+      <div class="topo-wire">
+        <span>encrypted UDP<br>NAT-traversed via Pilot rendezvous</span>
+      </div>
+
+      <article class="topo-host">
+        <header class="topo-host-h">
+          <span class="topo-host-eyebrow">Host B</span>
+          <h4>Remote worker</h4>
+        </header>
+        <div class="topo-stack">
+          <div class="topo-block">
+            <div class="topo-block-title">pilot-daemon</div>
+          </div>
+          <div class="topo-conn"><span>unix socket</span></div>
+          <div class="topo-block">
+            <div class="topo-block-title">WorkerServer (port 5000)</div>
+            <ul>
+              <li>search()<span class="tag">open</span></li>
+              <li>evaluate()<span class="tag">ACL: trusted</span></li>
+              <li>research()<span class="tag">streaming</span></li>
+              <li>checkpoint_*<span class="tag">SQLite</span></li>
+            </ul>
+          </div>
+        </div>
+      </article>
+    </div>
   </div>
 </section>
 
