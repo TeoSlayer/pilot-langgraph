@@ -702,25 +702,37 @@ pre .n { color: #eceae3; }
       handles only discovery and NAT hole-punching — your data flows directly between daemons,
       AES-256-GCM encrypted, signed by Ed25519 identities.
     </p>
-    <div class="diagram"><span class="a">[ your laptop ]</span>                                <span class="a">[ remote pilot worker ]</span>
-┌───────────────────────────┐      ┌───────────────────────────────────┐
-│  LangGraph (yours)        │      │  WorkerServer (port 5000)         │
-│   ├─ planner              │      │   ├─ search()       [open]        │
-│   ├─ remote_node ─────────┼─dial─►   ├─ evaluate()     [ACL: trusted]│
-│   │   (PilotRemote        │      │   ├─ research()     [streaming]   │
-│   │    Runnable)          │◄─reply   └─ checkpoint_*   [SQLite]      │
-│   ├─ fanout               │      │                                   │
-│   │   (PilotFanout)       │      │  Built-in pub/sub broker          │
-│   ├─ checkpointer         │      │   (port 1002)                     │
-│   └─ summarizer           │      └───────────────────────────────────┘
-└───────────┬───────────────┘                          ▲
-            │                                          │  encrypted UDP
-┌───────────▼───────────────┐    ┌─────────────────────┴─────────────┐
-│  PilotConnection (asyncio)├─u──►  pilot-daemon (host)              │
-└───────────────────────────┘    └─────────────────┬─────────────────┘
-                                                   │
-                                            NAT-traversed via
-                                          Pilot rendezvous</div>
+    <div class="diagram"><span class="a">YOUR HOST</span>
+┌─────────────────────────────────────────┐
+│  LangGraph  (your code)                 │
+│   ├─ planner                            │
+│   ├─ PilotRemoteRunnable                │
+│   ├─ PilotFanoutRunnable                │
+│   ├─ PilotCheckpointSaver               │
+│   └─ summarizer                         │
+└──────────────────┬──────────────────────┘
+                   │  unix socket
+                   ▼
+┌─────────────────────────────────────────┐
+│  pilot-daemon                           │
+└──────────────────┬──────────────────────┘
+                   │
+                   │  <span class="a">encrypted UDP  ·  NAT-traversed</span>
+                   │  via Pilot rendezvous
+                   ▼
+┌─────────────────────────────────────────┐
+│  pilot-daemon                           │
+└──────────────────┬──────────────────────┘
+                   │  unix socket
+                   ▼
+┌─────────────────────────────────────────┐
+│  WorkerServer  (port 5000)              │
+│   ├─ search()        [open]             │
+│   ├─ evaluate()      [ACL: trusted]     │
+│   ├─ research()      [streaming]        │
+│   └─ checkpoint_*    [SQLite]           │
+└─────────────────────────────────────────┘
+<span class="a">REMOTE WORKER</span></div>
   </div>
 </section>
 
